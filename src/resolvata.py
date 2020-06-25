@@ -2,14 +2,36 @@
 
 import io
 import abc
-import contextlib
 import typing as t
 
 T = t.TypeVar("T")
 
 
+class _FileProxy:  # TODO: unit-test
+    def __init__(
+        self, proxied: io.IOBase, close_callback: t.Callable[[], None] = None
+    ) -> None:
+        self.proxied = proxied
+        self.close_callback = close_callback
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__.__name__, self.proxied)
+
+    def __getattribute__(self, item):
+        if item == "close":
+            return super().__getattribute__(item)
+        return getattr(self.proxied, item)
+
+    def close(self) -> None:
+        if self.close_callback:
+            self.close_callback()
+        self.proxied.close()
+
+
 class PathResolverABC(metaclass=abc.ABCMeta):  # TODO: unit-test
     """Base path-resolver base class."""
+
+    _proxy_cls = _FileProxy
 
     @abc.abstractmethod
     def get_path(self, name: str) -> str:
@@ -42,8 +64,7 @@ class PathResolverABC(metaclass=abc.ABCMeta):  # TODO: unit-test
             stream: stream to write from
         """
 
-    @contextlib.contextmanager
-    def open(self, name: str, mode: str = "r") -> t.Generator[io.IOBase, None, None]:
+    def open(self, name: str, mode: str = "r") -> _FileProxy:
         """Open file for reading or writing as a stream.
 
         Args:
@@ -51,7 +72,7 @@ class PathResolverABC(metaclass=abc.ABCMeta):  # TODO: unit-test
             mode: mode to open as (support 'rwbt', see ``open`` for help)
 
         Returns:
-            file proxy context-manager
+            proxy file-object
 
         Raises:
             ValueError: on invalid mode
@@ -64,6 +85,13 @@ class PathResolverABC(metaclass=abc.ABCMeta):  # TODO: unit-test
         if any(c not in "rwbt" for c in mode):
             raise ValueError("Invalid characters in mode (valid are 'rwbt'): %s" % mode)
 
+        close_callback = None
+        if "w" in mode:
+
+            def close_callback():
+                stream.seek(0)
+                self.write_from(name, stream)
+
         stream = io.BytesIO()
         if "r" in mode:
             self.read_into(name, stream)
@@ -71,12 +99,7 @@ class PathResolverABC(metaclass=abc.ABCMeta):  # TODO: unit-test
         stream_text = stream
         if "b" not in mode:
             stream_text = io.TextIOWrapper(stream, write_through=True)
-        try:
-            yield stream_text
-        finally:
-            if "w" in mode:
-                stream.seek(0)
-                self.write_from(name, stream)
+        return self._proxy_cls(stream_text, close_callback)
 
 
 class ObjectResolverABC(PathResolverABC, t.Generic[T], metaclass=abc.ABCMeta):  # TODO: unit-test
