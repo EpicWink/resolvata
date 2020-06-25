@@ -48,11 +48,21 @@ class PathResolverABC(metaclass=abc.ABCMeta):  # TODO: unit-test
 
         Args:
             name: name of file to open
-            mode: mode to open as
+            mode: mode to open as (support 'rwbt', see ``open`` for help)
 
         Returns:
             file proxy context-manager
+
+        Raises:
+            ValueError: on invalid mode
         """
+
+        if sum(c in mode for c in "rw") != 1:
+            raise ValueError("Need one of 'rw' in mode: %s" % mode)
+        if sum(c in mode for c in "bt") == 2:
+            raise ValueError("Need at most one of 'bt' in mode: %s" % mode)
+        if any(c not in "rwbt" for c in mode):
+            raise ValueError("Invalid characters in mode (valid are 'rwbt'): %s" % mode)
 
         stream = io.BytesIO()
         if "r" in mode:
