@@ -5,6 +5,8 @@ import abc
 import contextlib
 import typing as t
 
+T = t.TypeVar("T")
+
 
 class PathResolverABC(metaclass=abc.ABCMeta):  # TODO: unit-test, document
     @abc.abstractmethod
@@ -36,22 +38,22 @@ class PathResolverABC(metaclass=abc.ABCMeta):  # TODO: unit-test, document
                 self.write_from(name, stream)
 
 
-class ObjectResolverABC(PathResolverABC, metaclass=abc.ABCMeta):  # TODO: unit-test, document
+class ObjectResolverABC(PathResolverABC, t.Generic[T], metaclass=abc.ABCMeta):  # TODO: unit-test, document
     @abc.abstractmethod
-    def load(self, stream: io.BytesIO) -> t.Any:
+    def load(self, stream: io.BytesIO) -> T:
         pass
 
     @abc.abstractmethod
-    def dump(self, item: t.Any, stream: io.BytesIO) -> None:
+    def dump(self, item: T, stream: io.BytesIO) -> None:
         pass
 
-    def get_item(self, name: str) -> t.Any:
+    def get_item(self, name: str) -> T:
         stream = io.BytesIO()
         self.read_into(name, stream)
         stream.seek(0)
         return self.load(stream)
 
-    def put_item(self, name: str, item: t.Any) -> None:
+    def put_item(self, name: str, item: T) -> None:
         stream = io.BytesIO()
         self.dump(item, stream)
         stream.seek(0)
