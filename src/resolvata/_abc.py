@@ -34,3 +34,25 @@ class PathResolverABC(metaclass=abc.ABCMeta):  # TODO: unit-test, document
             if "w" in mode:
                 stream.seek(0)
                 self.write_from(name, stream)
+
+
+class ObjectResolverABC(PathResolverABC, metaclass=abc.ABCMeta):  # TODO: unit-test, document
+    @abc.abstractmethod
+    def load(self, stream: io.BytesIO) -> t.Any:
+        pass
+
+    @abc.abstractmethod
+    def dump(self, item: t.Any, stream: io.BytesIO) -> None:
+        pass
+
+    def get_item(self, name: str) -> t.Any:
+        stream = io.BytesIO()
+        self.read_into(name, stream)
+        stream.seek(0)
+        return self.load(stream)
+
+    def put_item(self, name: str, item: t.Any) -> None:
+        stream = io.BytesIO()
+        self.dump(item, stream)
+        stream.seek(0)
+        self.write_from(name, stream)
