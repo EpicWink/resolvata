@@ -47,13 +47,13 @@ class ObjectResolverABC(PathResolverABC, t.Generic[T], metaclass=abc.ABCMeta):  
     def dump(self, item: T, stream: io.BytesIO) -> None:
         pass
 
-    def get_item(self, name: str) -> T:
+    def get(self, name: str) -> T:
         stream = io.BytesIO()
         self.read_into(name, stream)
         stream.seek(0)
         return self.load(stream)
 
-    def put_item(self, name: str, item: T) -> None:
+    def put(self, name: str, item: T) -> None:
         stream = io.BytesIO()
         self.dump(item, stream)
         stream.seek(0)
