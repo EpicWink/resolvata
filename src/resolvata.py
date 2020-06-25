@@ -72,7 +72,7 @@ class PathResolverABC(metaclass=abc.ABCMeta):  # TODO: unit-test
             mode: mode to open as (support 'rwbt', see ``open`` for help)
 
         Returns:
-            proxy file-object
+            proxy file-object, which will write on close
 
         Raises:
             ValueError: on invalid mode
